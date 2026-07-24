@@ -1,6 +1,14 @@
 
 # Change Log
 
+## 1.11.0 - 2026-07-24
+
+- Enable SAS binaries on Linux
+- Add download_sas_binaries() utility for downloading SAS binaries
+- Update Linux system requirement to include libnuma dependency
+- Improve Linux binary installation and dependency handling
+- Update TK subsystem
+
 ## 1.10.0 - 2024-12-05
 
 - Update TK subsystem
