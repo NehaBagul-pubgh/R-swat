@@ -18,8 +18,8 @@
 #' SWAT: SAS Wrapper for Analytics Transfer (SWAT)
 #'
 #' This package enables you to connect from \R to a SAS Cloud Analytic Services
-#' host, run actions on in-memory tables, and work with the results of the 
-#' actions. 
+#' host, run actions on in-memory tables, and work with the results of the
+#' actions.
 #' \itemize{
 #'   \item The \code{\link{CAS}} class provides an interface to your
 #'         connection to the CAS server and CAS session.
@@ -34,7 +34,7 @@
 #' that your \R installation have access to a precompiled library (rswat.so or
 #' rswat.dll).  An alternative is to communicate with the server using the REST
 #' interface of the server over HTTP. See the connection examples that follow.
-#' 
+#'
 #' The responses and results of the actions are returned as \R objects.
 #'
 #' @section Connect and start a session:
@@ -170,7 +170,7 @@
    try(library.dynam.unload('rswat', lib), silent=FALSE)
 }
 
-binaryEnabled <- function() 
+binaryEnabled <- function()
 {
    return( any(grepl('/rswat.(dll|so|dylib)', as.character(.dynLibs()))) )
 }
@@ -418,7 +418,7 @@ CASDataMsgHandler <- setRefClass(
                sw_databuffer$setInt32(row-1, vars[[col]][['offset']], rDate2cas(values[[col]]))
                swat::errorcheck(sw_databuffer)
             }
-            else if ( tolower(vars[[col]][['type']]) == 'datetime' || 
+            else if ( tolower(vars[[col]][['type']]) == 'datetime' ||
                       tolower(vars[[col]][['type']]) == 'time' )
             {
                if ( class(values[[col]])[[1]] == 'POSIXlt' ) {
@@ -589,7 +589,7 @@ CASDataMsgHandler <- setRefClass(
          {
             for ( k in 1:length(item) )
             {
-               out[[n]] <- paste(out[[n]], item[[k]], sep='') 
+               out[[n]] <- paste(out[[n]], item[[k]], sep='')
                n <- n + 1
             }
          }
@@ -606,7 +606,7 @@ CASDataMsgHandler <- setRefClass(
 
 #' @export
 
-.getConnectionInfo <- function(hostname, port, username, password, protocol, path) 
+.getConnectionInfo <- function(hostname, port, username, password, protocol, path)
 {
    # Get defaults from environment
    hostname <- hostname[hostname != '']
@@ -690,7 +690,7 @@ CASDataMsgHandler <- setRefClass(
          newHostname <- c(newHostname, paste(protocol, '://', hostname[[i]], sep=''))
       else
          newHostname <- c(newHostname, hostname[[i]])
-   } 
+   }
 
    hostname <- .expandURL(newHostname)
    urlp <- httr::parse_url(hostname[[1]])
@@ -750,7 +750,7 @@ CASDataMsgHandler <- setRefClass(
 }
 
 .get_token <- function(username=NULL, password=NULL, authcode=NULL, client_id=NULL,
-                       client_secret=NULL, url=NULL) {
+                       client_secret=NULL, url=NULL, tenant_id=NULL) {
    if ( is.null(client_id) ) {
       client_id <- getOption('cas.client_id')
       if ( is.null(client_id) ) {
@@ -771,6 +771,19 @@ CASDataMsgHandler <- setRefClass(
 
    if ( is.null(password) ) {
       password <- getOption('cas.token')
+   }
+
+   if ( is.null(tenant_id) ) {
+      tenant_id <- getOption('cas.tenant_id')
+   }
+
+   if ( is.null(tenant_id) || tenant_id == '' ) {
+      if ( Sys.getenv('CAS_TENANT_ID') != '' ) {
+         tenant_id <- Sys.getenv('CAS_TENANT_ID')
+      }
+      else if ( Sys.getenv('CASTENANTID') != '' ) {
+         tenant_id <- Sys.getenv('CASTENANTID')
+      }
    }
 
    config <- .setup_ssl()
@@ -799,10 +812,22 @@ CASDataMsgHandler <- setRefClass(
       stop('no authcode, username, or password was given')
    }
 
-   res <- httr::POST(url, auth, config, body=body,
-                     httr::add_headers('Accept'='application/vnd.sas.compute.session+json',
-                                       'Content-Type'='application/x-www-form-urlencoded'))
+  headers <- list(
+      'Accept'='application/vnd.sas.compute.session+json',
+      'Content-Type'='application/x-www-form-urlencoded'
+   )
 
+   if ( !is.null(authcode) && !is.null(tenant_id) && tenant_id != '') {
+      headers[['SAS-Tenant-Id']] <- tenant_id
+   }
+
+   res <- httr::POST(
+      url,
+      auth,
+      config,
+      body=body,
+      do.call(httr::add_headers, headers)
+   )
    out <- httr::content(res, as='parsed', type='application/json', encoding='utf-8')
 
    return(out$access_token)
@@ -813,7 +838,7 @@ CASDataMsgHandler <- setRefClass(
 #' An instance of this class represents a connection and session
 #' between the client (R) and the server (SAS Cloud Analytic Services).
 #'
-#' @param hostname A \code{character} string that specifies the 
+#' @param hostname A \code{character} string that specifies the
 #'   host name of the CAS controller.
 #' @param port A \code{numeric} value that specifies the network
 #'   port number that the CAS controller listens on.
@@ -825,7 +850,7 @@ CASDataMsgHandler <- setRefClass(
 #'     \item{https}{use HTTPS communication with the REST interface
 #'       on the CAS controller. This protocol must be specified
 #'       explicity.}
-#'     \item{auto}{automatically detect between the binary and HTTP.} 
+#'     \item{auto}{automatically detect between the binary and HTTP.}
 #'   }
 #' @param username A \code{character} string that identifies the
 #'   user ID to authenticate as.
@@ -845,7 +870,7 @@ CASDataMsgHandler <- setRefClass(
 #' @param path Base path of the connection URL
 #' @param authcode Authorization code from SASLogon used to retrieve
 #'   an OAuth token.
-#'
+#' @param tenant_id UUID of the tenant used for multi-tenant deployments.
 #' @return A CAS object.
 #' @export
 #' @rawRd % Copyright SAS Institute
@@ -853,7 +878,7 @@ CASDataMsgHandler <- setRefClass(
 #' @examples
 #' \dontrun{
 #' # Use binary communication and credentals from the default authinfo location.
-#' s <- CAS('cloud.example.com', 5570) 
+#' s <- CAS('cloud.example.com', 5570)
 #'
 #' # Use HTTPS and credentials from the default authinfo location.
 #' s <- CAS('cloud.example.com', 8777, protocol='https')
@@ -878,18 +903,18 @@ CAS <- setRefClass(
       protocol      = 'character',
       username      = 'character',
       session       = 'character',
-      performance   = 'ANY',                         
-      severity      = 'ANY',            
-      statusCode    = 'ANY',             
-      reason        = 'ANY',            
-      status        = 'ANY',             
-      messages      = 'ANY',                         
+      performance   = 'ANY',
+      severity      = 'ANY',
+      statusCode    = 'ANY',
+      reason        = 'ANY',
+      status        = 'ANY',
+      messages      = 'ANY',
       events        = 'ANY',
       serverFeatures = 'character'
    ),
 
    methods = list(
-      initialize = function( hostname=NULL, port=NULL, username=NULL, password=NULL, protocol='auto', path=NULL, authcode=NULL, ... ) {
+      initialize = function( hostname=NULL, port=NULL, username=NULL, password=NULL, protocol='auto', path=NULL, authcode=NULL, tenant_id=NULL, ... ) {
          prototype <- NULL
          options <- list(...)
 
@@ -963,7 +988,7 @@ CAS <- setRefClass(
             if ( !is.null(authcode) )
             {
                .self$username <<- ''
-               password <- .get_token(authcode=authcode, url=.self$hostname)
+               password <- .get_token(authcode=authcode, url=.self$hostname, tenant_id=tenant_id)
             }
             sw_error <<- REST_CASError(soptions)
             CASConnection <- REST_CASConnection
@@ -1206,7 +1231,7 @@ CAS <- setRefClass(
             while ( TRUE ) {
                nextresp <- getnext(.self, datamsghandler=datamsghandler)
                if ( is.null(nextresp$response) ) break
-   
+
                while ( TRUE ) {
                   result <- getnext(nextresp$response)
                   if ( is.null(result) || length(result) < 1) break
@@ -1234,7 +1259,7 @@ CAS <- setRefClass(
                output[['performance']] <- nextresp$response$performance
                output[['disposition']] <- nextresp$response$disposition
             }
-            if ( !is.null(output[['disposition']][['statusCode']]) && 
+            if ( !is.null(output[['disposition']][['statusCode']]) &&
                  output[['disposition']][['statusCode']] != RETRY_ACTION_CODE ) {
                 break
             }
@@ -1243,18 +1268,18 @@ CAS <- setRefClass(
          output[['results']] <- results
          output[['events']] <- evts
 
-         .self$performance = output[['performance']] 
-         .self$severity    = output[['disposition']][['severity']] 
-         .self$statusCode  = output[['disposition']][['statusCode']] 
-         .self$reason      = output[['disposition']][['reason']] 
-         .self$status      = output[['disposition']][['status']] 
-         .self$messages    = output[['messages']]   
-         .self$events      = output[['events']]      
+         .self$performance = output[['performance']]
+         .self$severity    = output[['disposition']][['severity']]
+         .self$statusCode  = output[['disposition']][['statusCode']]
+         .self$reason      = output[['disposition']][['reason']]
+         .self$status      = output[['disposition']][['status']]
+         .self$messages    = output[['messages']]
+         .self$events      = output[['events']]
 
          actn <- tolower(actn)
          if (actn == "table.loadtable" || actn == "loadtable" ||
              actn == "table.addcaslib" || actn == "addcaslib") {
-           .on_connection_updated(.self, "") 
+           .on_connection_updated(.self, "")
          }
 
          return (output)
@@ -1846,7 +1871,7 @@ cas2r <- function(sw_value) {
                                      paste(varname,
                                            getOption('cas.bygroup.dup.suffix'), sep=''),
                                      rep(fmtval, nRows))
-             } 
+             }
              else
              {
                  stop(paste('Unrecognized value for cas.bygroup.mode:',
@@ -2205,7 +2230,7 @@ setListValue <- function(sw_values, i, key, value) {
    {
       sw_sublist <- sw_values$createListAt(i, key, length(value))
       swat::errorcheck(sw_values)
-      if ( length(value) > 0 ) 
+      if ( length(value) > 0 )
       {
           for ( j in 1:length(value) )
           {
@@ -2353,7 +2378,7 @@ cas.close <- function(conn)
 cas.terminate <- function(conn)
 {
    conn$retrieve('session.endsession', `_messagelevel`='error')
-   conn$close() 
+   conn$close()
 }
 
 #' Upload a data.frame or file to a CAS table

@@ -6,7 +6,7 @@
 \alias{CAS}
 \title{CAS Object Class}
 \arguments{
-\item{hostname}{A \code{character} string that specifies the 
+\item{hostname}{A \code{character} string that specifies the
 host name of the CAS controller.}
 
 \item{port}{A \code{numeric} value that specifies the network
@@ -20,7 +20,7 @@ port number that the CAS controller listens on.}
   \item{https}{use HTTPS communication with the REST interface
     on the CAS controller. This protocol must be specified
     explicity.}
-  \item{auto}{automatically detect between the binary and HTTP.} 
+  \item{auto}{automatically detect between the binary and HTTP.}
 }}
 
 \item{username}{A \code{character} string that identifies the
@@ -47,6 +47,8 @@ Windows.}
 
 \item{authcode}{Authorization code from SASLogon used to retrieve
 an OAuth token.}
+
+\item{tenant_id}{UUID of the tenant used for multi-tenant deployments.}
 }
 \value{
 A CAS object.
@@ -59,7 +61,7 @@ between the client (R) and the server (SAS Cloud Analytic Services).
 \examples{
 \dontrun{
 # Use binary communication and credentals from the default authinfo location.
-s <- CAS('cloud.example.com', 5570) 
+s <- CAS('cloud.example.com', 5570)
 
 # Use HTTPS and credentials from the default authinfo location.
 s <- CAS('cloud.example.com', 8777, protocol='https')
